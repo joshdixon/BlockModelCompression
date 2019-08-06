@@ -26,12 +26,18 @@ public class VoxelTerrain : MonoBehaviour
     public MeshRenderer meshRenderer;
     public MeshFilter meshFilter;
 
+    public int solidTerrainLevel;
+    public VoxelSphere[] spheres;
+
     void Start()
     {
         meshRenderer = GetComponent<MeshRenderer>();
         meshFilter = GetComponent<MeshFilter>();
 
         voxelProbabilities = new VoxelTypeProbability[terrainWidth * subBlocksPerParent.x, terrainHeight * subBlocksPerParent.y, terrainDepth * subBlocksPerParent.z];
+
+        InitialiseProbabilities();
+        GeneratePerlinTerrain();
         GenerateProbabilitiesSphere();
 
         CreateBlockModel();
@@ -39,13 +45,8 @@ public class VoxelTerrain : MonoBehaviour
         GenerateMesh();
     }
 
-    public int sphereRadius;
-    public int terrainLevel;
-    public Vector3Int sphereCenter;
-    void GenerateProbabilitiesSphere()
+    void InitialiseProbabilities()
     {
-        int sphereRadiusSquared = sphereRadius * sphereRadius;
-
         for (int x = 0; x < terrainWidth * subBlocksPerParent.x; x++)
         {
             for (int y = 0; y < terrainHeight * subBlocksPerParent.y; y++)
@@ -55,29 +56,68 @@ public class VoxelTerrain : MonoBehaviour
                     VoxelTypeProbability probability = new VoxelTypeProbability();
                     probability.Probabilities = new float[numVoxelTypes];
 
-                    Vector3Int voxelPosition = new Vector3Int(x, y, z);
-
                     for (int i = 0; i < numVoxelTypes; i++)
-                        probability.Probabilities[i] = 0;
+                        probability.Probabilities[i] = 0f;
 
-                    if (y < terrainLevel)
+                    voxelProbabilities[x, y, z] = probability;
+                }
+            }
+        }
+    }
+
+    void GeneratePerlinTerrain()
+    {
+        for (int x = 0; x < terrainWidth * subBlocksPerParent.x; x++)
+        {
+            for (int z = 0; z < terrainDepth * subBlocksPerParent.z; z++)
+            {
+                float noise = Mathf.PerlinNoise(x / (float)(terrainWidth * subBlocksPerParent.x), z / (float)(terrainDepth * subBlocksPerParent.z));
+
+                int nonSolidTerrainHeight = (terrainHeight * subBlocksPerParent.y) - solidTerrainLevel;
+                int columnHeight = solidTerrainLevel + (int)(nonSolidTerrainHeight * noise);
+
+                for (int y = 0; y < terrainHeight * subBlocksPerParent.y; y++)
+                {
+                    VoxelTypeProbability probability = voxelProbabilities[x, y, z];
+
+                    if (y < columnHeight)
                     {
-                        probability.Probabilities[0] = 1;
-                        for (int i = 1; i < numVoxelTypes; i++)
-                            probability.Probabilities[i] = 0;
-                    }
-
-                    float squareDistance = (sphereCenter - voxelPosition).sqrMagnitude;
-
-                    if (squareDistance <= sphereRadiusSquared && y < terrainLevel)
-                    {
-                        probability.Probabilities[0] = 0.01f;
-                        probability.Probabilities[1] = 1f;
-                        for (int i = 2; i < numVoxelTypes; i++)
-                            probability.Probabilities[i] = 0;
+                        probability.Probabilities[0] = 1f;
                     }
 
                     voxelProbabilities[x, y, z] = probability;
+                }
+            }
+        }
+    }
+
+    void GenerateProbabilitiesSphere()
+    {
+        foreach (VoxelSphere sphere in spheres)
+        {
+            float sphereRadiusSquared = sphere.radius * sphere.radius;
+
+            for (int x = 0; x < terrainWidth * subBlocksPerParent.x; x++)
+            {
+                for (int y = 0; y < terrainHeight * subBlocksPerParent.y; y++)
+                {
+                    for (int z = 0; z < terrainDepth * subBlocksPerParent.z; z++)
+                    {
+                        VoxelTypeProbability probability = voxelProbabilities[x, y, z];
+
+                        Vector3 voxelPosition = new Vector3(x, y, z);
+                        float squareDistance = (sphere.center - voxelPosition).sqrMagnitude;
+
+                        if (squareDistance <= sphereRadiusSquared)
+                        {
+                            for (int i = 0; i < numVoxelTypes; i++)
+                                probability.Probabilities[i] = 0.01f;
+
+                            probability.Probabilities[sphere.voxelType] = 1f;
+                        }
+
+                        voxelProbabilities[x, y, z] = probability;
+                    }
                 }
             }
         }
@@ -173,7 +213,14 @@ public class VoxelTerrain : MonoBehaviour
 
                                     int subBlockType = GetVoxelType(subBlockX, subBlockY, subBlockZ);
 
-                                    BuildBlock(parentBlock, x, y, z, verts, uvs, tris, new Vector3(1f / subBlocksPerParent.x, 1f / subBlocksPerParent.y, 1f / subBlocksPerParent.z));
+                                    if (subBlockType == -1)
+                                        continue;
+
+                                    Vector3 scale = new Vector3(1f / subBlocksPerParent.x, 1f / subBlocksPerParent.y, 1f / subBlocksPerParent.z);
+                                    float subBlockPositionX = x + i * scale.x;
+                                    float subBlockPositionY = y + j * scale.y;
+                                    float subBlockPositionZ = z + k * scale.z;
+                                    BuildBlock(subBlockType, subBlockPositionX, subBlockPositionY, subBlockPositionZ, verts, uvs, tris, scale);
                                 }
                             }
                         }
@@ -191,32 +238,35 @@ public class VoxelTerrain : MonoBehaviour
         meshFilter.mesh = mesh;
     }
 
-    void BuildBlock(int voxelType, int x, int y, int z, List<Vector3> verts, List<Vector2> uvs, List<int> tris, Vector3 scale)
+    void BuildBlock(int voxelType, float x, float y, float z, List<Vector3> verts, List<Vector2> uvs, List<int> tris, Vector3 scale)
     {
         //Left side
         if (IsFaceVisible(x - 1, y, z))
             BuildFace(voxelType, new Vector3(x, y, z), Vector3.up, Vector3.forward, false, verts, uvs, tris, scale);
         //Right side
         if (IsFaceVisible(x + 1, y, z))
-            BuildFace(voxelType, new Vector3(x + 1, y, z), Vector3.up, Vector3.forward, true, verts, uvs, tris, scale);
+            BuildFace(voxelType, new Vector3(x + scale.x, y, z), Vector3.up, Vector3.forward, true, verts, uvs, tris, scale);
 
         //Bottom side
         if (IsFaceVisible(x, y - 1, z))
             BuildFace(voxelType, new Vector3(x, y, z), Vector3.forward, Vector3.right, false, verts, uvs, tris, scale);
         //Top side
         if (IsFaceVisible(x, y + 1, z))
-            BuildFace(voxelType, new Vector3(x, y + 1, z), Vector3.forward, Vector3.right, true, verts, uvs, tris, scale);
+            BuildFace(voxelType, new Vector3(x, y + scale.y, z), Vector3.forward, Vector3.right, true, verts, uvs, tris, scale);
 
         //Back side
         if (IsFaceVisible(x, y, z - 1))
             BuildFace(voxelType, new Vector3(x, y, z), Vector3.up, Vector3.right, true, verts, uvs, tris, scale);
         //Front side
         if (IsFaceVisible(x, y, z + 1))
-            BuildFace(voxelType, new Vector3(x, y, z + 1), Vector3.up, Vector3.right, false, verts, uvs, tris, scale);
+            BuildFace(voxelType, new Vector3(x, y, z + scale.z), Vector3.up, Vector3.right, false, verts, uvs, tris, scale);
     }
 
     void BuildFace(int voxelType, Vector3 corner, Vector3 up, Vector3 right, bool reversed, List<Vector3> verts, List<Vector2> uvs, List<int> tris, Vector3 scale)
     {
+        if (voxelType < 0 || voxelType >= 3)
+            return;
+
         //Uvs
         float offset = 0.02f;
 
@@ -279,13 +329,20 @@ public class VoxelTerrain : MonoBehaviour
         }
     }
 
-    bool IsFaceVisible(int neighbourX, int neighbourY, int neighbourZ)
+    bool IsFaceVisible(float neighbourX, float neighbourY, float neighbourZ)
     {
         if (neighbourY < filterLayerMin || neighbourY > filterLayerMax)
             return true;
 
-        if (GetVoxelType(neighbourX, neighbourY, neighbourZ) != -1)
+        if ((neighbourX < 0) || (neighbourY < 0) || (neighbourZ < 0) || (neighbourX >= terrainWidth) || (neighbourY >= terrainHeight) || (neighbourZ >= terrainDepth))
+            return true;
+
+        if (parentBlocks[(int)neighbourX, (int)neighbourY, (int)neighbourZ] == -2)
+            return true;
+
+        if (parentBlocks[(int)neighbourX, (int)neighbourY, (int)neighbourZ] != -1)
             return false;
+        
 
         return true;
     }
@@ -309,4 +366,12 @@ public class VoxelTerrain : MonoBehaviour
 
         return maxIndex;
     }
+}
+
+[System.Serializable]
+public class VoxelSphere
+{
+    public float radius;
+    public Vector3 center;
+    public int voxelType;
 }

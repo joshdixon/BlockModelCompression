@@ -767,7 +767,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   m_LocalRotation: {x: 0.25488704, y: 0.16773126, z: -0.044943456, w: 0.95125127}
-  m_LocalPosition: {x: 4, y: 22, z: -10}
+  m_LocalPosition: {x: 4, y: 13, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -892,9 +892,9 @@ MonoBehaviour:
   m_HandleRect: {fileID: 426152393}
   m_Direction: 0
   m_MinValue: 0
-  m_MaxValue: 40
+  m_MaxValue: 8
   m_WholeNumbers: 1
-  m_Value: 40
+  m_Value: 8
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
@@ -957,7 +957,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   terrainWidth: 20
-  terrainHeight: 20
+  terrainHeight: 8
   terrainDepth: 20
   numVoxelTypes: 4
   parentBlockSize: {x: 1, y: 1, z: 1}
@@ -967,9 +967,17 @@ MonoBehaviour:
   mesh: {fileID: 0}
   meshRenderer: {fileID: 0}
   meshFilter: {fileID: 0}
-  sphereRadius: 8
-  terrainLevel: 50
-  sphereCenter: {x: 10, y: 10, z: 10}
+  solidTerrainLevel: 5
+  spheres:
+  - radius: 10
+    center: {x: 20, y: 4, z: 20}
+    voxelType: 1
+  - radius: 8
+    center: {x: 10, y: 5, z: 10}
+    voxelType: 2
+  - radius: 4
+    center: {x: 5, y: 2, z: 5}
+    voxelType: 1
 --- !u!33 &1288154676
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -1360,7 +1368,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1442297799}
   m_Direction: 0
   m_MinValue: 0
-  m_MaxValue: 20
+  m_MaxValue: 8
   m_WholeNumbers: 1
   m_Value: 0
   m_OnValueChanged:
