@@ -10,6 +10,13 @@ public class VoxelTerrainUI : MonoBehaviour
     public Slider minFilterSlider;
     public Slider maxFilterSlider;
 
+    public ShadedWireframe wireframeFilter;
+
+    private void Start()
+    {
+        wireframeFilter.enabled = false;
+    }
+
     public void MinFilterSliderValueChanged(Slider slider)
     {
         terrain.filterLayerMin = (int)slider.value;
@@ -33,5 +40,10 @@ public class VoxelTerrainUI : MonoBehaviour
         }
 
         terrain.GenerateMesh();
+    }
+
+    public void WireFrameToggled(Toggle toggle)
+    {
+        wireframeFilter.enabled = toggle.isOn;
     }
 }

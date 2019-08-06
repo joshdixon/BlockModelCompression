@@ -275,10 +275,9 @@ public class VoxelTerrain : MonoBehaviour
 
         uvCorner.x = 0.25f * voxelType + offset;
 
-        float uvRow = (corner.y + up.y) % 7;
-        if (uvRow > 4)
+        float uvRow = ((int)corner.y + (int)up.y) % 7;
+        if (uvRow >= 4)
             uvRow = 7 - uvRow;
-
         uvRow /= 4f;
 
         uvCorner.y = uvRow;
