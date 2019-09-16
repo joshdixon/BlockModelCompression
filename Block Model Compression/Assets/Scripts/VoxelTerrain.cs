@@ -382,8 +382,13 @@ public class VoxelTerrain : MonoBehaviour
     int[,,] debugValues;
     int[,,] finalDebugValues;
 
-    Vector3 maxOrigin;
-    Vector3 maxSize;
+    public bool debugUseFinalSum = true;
+
+    Vector3 maxOriginWorld;
+    Vector3 maxSizeWorld;
+
+    Vector3Int maxOrigin;
+    Vector3Int maxSize;
 
     public int maxSum = -1;
     public int bestK = 0;
@@ -393,19 +398,19 @@ public class VoxelTerrain : MonoBehaviour
 
     List<SubBlock> CalculateSubBlocks(int parentX, int parentY, int parentZ)
     {
-        maxSum = -1;
-        bestK = 0;
-        bestM = 0;
-
         List<SubBlock> currentSubBlocks = new List<SubBlock>();
 
         for (int voxelType = 0; voxelType < numVoxelTypes; voxelType++)
         {
             rCumulativeSum = new int[subBlocksPerParent.x, subBlocksPerParent.y, subBlocksPerParent.z];
 
-            for (int K = 1; K <= 4; K++)
+            maxSum = -1;
+            bestK = 0;
+            bestM = 0;
+
+            for (int K = 1; K <= 16; K++)
             {
-                for (int M = 1; M <= 4; M++)
+                for (int M = 1; M <= 16; M++)
                 {
                     for (int x = 0; x < subBlocksPerParent.x; x++)
                     {
@@ -482,21 +487,47 @@ public class VoxelTerrain : MonoBehaviour
 
                                     Debug.Log("X: " + x + ", Y: " + y + ", Z: " + z);
 
-                                    maxOrigin = new Vector3(
+                                    maxOriginWorld = new Vector3(
                                         x * parentBlockSize.x / subBlocksPerParent.x,
                                         y * parentBlockSize.y / subBlocksPerParent.y,
                                         z * parentBlockSize.z / subBlocksPerParent.z);
 
-                                    maxSize = new Vector3(
+                                    maxOrigin = new Vector3Int(x, y, z);
+
+                                    maxSizeWorld = new Vector3(
                                        finalCumulativeSum[x, y, z] * parentBlockSize.x / subBlocksPerParent.x,
                                        M * parentBlockSize.y / subBlocksPerParent.y,
                                        K * parentBlockSize.z / subBlocksPerParent.z);
+
+                                    maxSize = new Vector3Int(finalCumulativeSum[x, y, z], K, M);
                                 }
                             }
                         }
                     }
                 }
             }
+
+            currentSubBlocks.Add(new SubBlock()
+            {
+                OriginWorld = maxOriginWorld,
+                SizeWorld = maxSizeWorld,
+                Origin = maxOrigin,
+                Size = maxSize,
+                VoxelType = voxelType
+            });
+
+
+            ////Remove cuboid from array
+            //for (int x = 0; x < maxSize.x; x++)
+            //{
+            //    for (int y = 0; y < maxSize.y; y++)
+            //    {
+            //        for (int z = 0; z < maxSize.z; z++)
+            //        {
+            //            voxelTypes[maxOrigin.x - x, maxOrigin.y - y, maxOrigin.z - z] = -1;
+            //        }
+            //    }
+            //}
         }
 
 
@@ -519,12 +550,12 @@ public class VoxelTerrain : MonoBehaviour
         offset /= 2f;
 
         Handles.color = Color.yellow;
-        Handles.DrawWireCube((maxOrigin + 2 * offset + maxOrigin - maxSize + 2 * offset) / 2f, maxSize);
+        Handles.DrawWireCube((maxOriginWorld + 2 * offset + maxOriginWorld - maxSizeWorld + 2 * offset) / 2f, maxSizeWorld);
 
-        Handles.DrawSphere(0, maxOrigin + 2*offset, Quaternion.identity, 0.025f);
+        Handles.DrawSphere(0, maxOriginWorld + 2*offset, Quaternion.identity, 0.025f);
 
         Handles.color = Color.green;
-        Handles.DrawSphere(0, maxOrigin - maxSize + 2*offset, Quaternion.identity, 0.025f);
+        Handles.DrawSphere(0, maxOriginWorld - maxSizeWorld + 2*offset, Quaternion.identity, 0.025f);
         Handles.color = Color.white;
 
         for (int x = 0; x < subBlocksPerParent.x; x++)
@@ -538,7 +569,26 @@ public class VoxelTerrain : MonoBehaviour
                         y * parentBlockSize.y / subBlocksPerParent.y,
                         z * parentBlockSize.z / subBlocksPerParent.z);
 
-                    Handles.Label(origin + offset, finalDebugValues[x, y, z].ToString());
+                    GUIStyle style = new GUIStyle();
+
+                    if (debugUseFinalSum)
+                    {
+                        if (finalDebugValues[x, y, z] == 0)
+                            style.normal.textColor = Color.grey;
+                        else
+                            style.normal.textColor = Color.red;
+
+                        Handles.Label(origin + offset, finalDebugValues[x, y, z].ToString(), style);
+                    }
+                    else
+                    {
+                        if (rCumulativeSum[x, y, z] == 0)
+                            style.normal.textColor = Color.grey;
+                        else
+                            style.normal.textColor = Color.red;
+
+                        Handles.Label(origin + offset, rCumulativeSum[x, y, z].ToString(), style);
+                    }
                 }
             }
         }

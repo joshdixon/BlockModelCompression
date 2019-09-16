@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class SubBlock
 {
-    public Vector3 Size;
+    public Vector3Int Origin;
+    public Vector3Int Size;
+    public Vector3 OriginWorld;
+    public Vector3 SizeWorld;
     public int VoxelType;
 }
