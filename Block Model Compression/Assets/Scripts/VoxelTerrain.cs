@@ -153,11 +153,11 @@ public class VoxelTerrain : MonoBehaviour
                 for (int z = 0; z < terrainDepth; z++)
                 {
                     parentBlocks[x, y, z] = GetParentBlockType(x, y, z);
+
+                    CalculateSubBlocks(x, y, z);
                 }
             }
         }
-
-        CalculateSubBlocks(0, 0, 0);
     }
 
     int GetParentBlockType(int x, int y, int z)
@@ -402,135 +402,146 @@ public class VoxelTerrain : MonoBehaviour
 
         for (int voxelType = 0; voxelType < numVoxelTypes; voxelType++)
         {
-            rCumulativeSum = new int[subBlocksPerParent.x, subBlocksPerParent.y, subBlocksPerParent.z];
+            bool subBlockAdded = true;
 
-            maxSum = -1;
-            bestK = 0;
-            bestM = 0;
-
-            for (int K = 1; K <= 16; K++)
+            while (subBlockAdded)
             {
-                for (int M = 1; M <= 16; M++)
+                rCumulativeSum = new int[subBlocksPerParent.x, subBlocksPerParent.y, subBlocksPerParent.z];
+
+                maxSum = 0;
+                bestK = 0;
+                bestM = 0;
+
+                maxSize = Vector3Int.zero;
+
+                for (int K = 1; K <= 16; K++)
                 {
-                    for (int x = 0; x < subBlocksPerParent.x; x++)
+                    for (int M = 1; M <= 16; M++)
                     {
-                        for (int y = 0; y < subBlocksPerParent.y; y++)
+                        for (int x = 0; x < subBlocksPerParent.x; x++)
                         {
-                            int currentRSum = 0;
-
-                            for (int z = 0; z < subBlocksPerParent.z; z++)
-                            {
-                                int voxelX = x + parentX;
-                                int voxelY = y + parentY;
-                                int voxelZ = z + parentZ;
-
-                                if (voxelTypes[voxelX, voxelY, voxelZ] == voxelType)
-                                    currentRSum++;
-                                else
-                                    currentRSum = 0;
-
-                                rCumulativeSum[x, y, z] = currentRSum;
-                            }
-                        }
-                    }
-
-                    cCumulativeSum = new int[subBlocksPerParent.x, subBlocksPerParent.y, subBlocksPerParent.z];
-
-                    //int K = 2;
-
-                    for (int x = 0; x < subBlocksPerParent.x; x++)
-                    {
-                        for (int z = 0; z < subBlocksPerParent.z; z++)
-                        {
-                            int currentCSum = 0;
-
                             for (int y = 0; y < subBlocksPerParent.y; y++)
                             {
-                                if (rCumulativeSum[x, y, z] >= K)
-                                    currentCSum++;
-                                else
-                                    currentCSum = 0;
+                                int currentRSum = 0;
 
-                                cCumulativeSum[x, y, z] = currentCSum;
+                                for (int z = 0; z < subBlocksPerParent.z; z++)
+                                {
+                                    int voxelX = x + parentX;
+                                    int voxelY = y + parentY;
+                                    int voxelZ = z + parentZ;
+
+                                    if (voxelTypes[voxelX, voxelY, voxelZ] == voxelType)
+                                        currentRSum++;
+                                    else
+                                        currentRSum = 0;
+
+                                    rCumulativeSum[x, y, z] = currentRSum;
+                                }
                             }
                         }
-                    }
 
-                    finalCumulativeSum = new int[subBlocksPerParent.x, subBlocksPerParent.y, subBlocksPerParent.z];
-                    debugValues = new int[subBlocksPerParent.x, subBlocksPerParent.y, subBlocksPerParent.z];
+                        cCumulativeSum = new int[subBlocksPerParent.x, subBlocksPerParent.y, subBlocksPerParent.z];
 
-                    //int M = 2;
+                        //int K = 2;
 
-                    for (int y = 0; y < subBlocksPerParent.y; y++)
-                    {
-                        for (int z = 0; z < subBlocksPerParent.z; z++)
+                        for (int x = 0; x < subBlocksPerParent.x; x++)
                         {
-                            int currentFinalSum = 0;
-
-                            for (int x = 0; x < subBlocksPerParent.x; x++)
+                            for (int z = 0; z < subBlocksPerParent.z; z++)
                             {
-                                if (cCumulativeSum[x, y, z] >= M)
-                                    currentFinalSum++;
-                                else
-                                    currentFinalSum = 0;
+                                int currentCSum = 0;
 
-                                finalCumulativeSum[x, y, z] = currentFinalSum;
-                                debugValues[x, y, z] = currentFinalSum * K * M;
-
-                                if (finalCumulativeSum[x, y, z] * K * M > maxSum)
+                                for (int y = 0; y < subBlocksPerParent.y; y++)
                                 {
-                                    finalDebugValues = debugValues;
+                                    if (rCumulativeSum[x, y, z] >= K)
+                                        currentCSum++;
+                                    else
+                                        currentCSum = 0;
 
-                                    maxSum = finalCumulativeSum[x, y, z] * K * M;
-                                    bestK = K;
-                                    bestM = M;
+                                    cCumulativeSum[x, y, z] = currentCSum;
+                                }
+                            }
+                        }
 
-                                    Debug.Log("X: " + x + ", Y: " + y + ", Z: " + z);
+                        finalCumulativeSum = new int[subBlocksPerParent.x, subBlocksPerParent.y, subBlocksPerParent.z];
+                        debugValues = new int[subBlocksPerParent.x, subBlocksPerParent.y, subBlocksPerParent.z];
 
-                                    maxOriginWorld = new Vector3(
-                                        x * parentBlockSize.x / subBlocksPerParent.x,
-                                        y * parentBlockSize.y / subBlocksPerParent.y,
-                                        z * parentBlockSize.z / subBlocksPerParent.z);
+                        //int M = 2;
 
-                                    maxOrigin = new Vector3Int(x, y, z);
+                        for (int y = 0; y < subBlocksPerParent.y; y++)
+                        {
+                            for (int z = 0; z < subBlocksPerParent.z; z++)
+                            {
+                                int currentFinalSum = 0;
 
-                                    maxSizeWorld = new Vector3(
-                                       finalCumulativeSum[x, y, z] * parentBlockSize.x / subBlocksPerParent.x,
-                                       M * parentBlockSize.y / subBlocksPerParent.y,
-                                       K * parentBlockSize.z / subBlocksPerParent.z);
+                                for (int x = 0; x < subBlocksPerParent.x; x++)
+                                {
+                                    if (cCumulativeSum[x, y, z] >= M)
+                                        currentFinalSum++;
+                                    else
+                                        currentFinalSum = 0;
 
-                                    maxSize = new Vector3Int(finalCumulativeSum[x, y, z], K, M);
+                                    finalCumulativeSum[x, y, z] = currentFinalSum;
+                                    debugValues[x, y, z] = currentFinalSum * K * M;
+
+                                    if (finalCumulativeSum[x, y, z] * K * M > maxSum)
+                                    {
+                                        finalDebugValues = debugValues;
+
+                                        maxSum = finalCumulativeSum[x, y, z] * K * M;
+                                        bestK = K;
+                                        bestM = M;
+
+                                        Debug.Log("X: " + x + ", Y: " + y + ", Z: " + z);
+
+                                        maxOriginWorld = new Vector3(
+                                            x * parentBlockSize.x / subBlocksPerParent.x,
+                                            y * parentBlockSize.y / subBlocksPerParent.y,
+                                            z * parentBlockSize.z / subBlocksPerParent.z);
+
+                                        maxOrigin = new Vector3Int(x, y, z);
+
+                                        maxSizeWorld = new Vector3(
+                                           finalCumulativeSum[x, y, z] * parentBlockSize.x / subBlocksPerParent.x,
+                                           M * parentBlockSize.y / subBlocksPerParent.y,
+                                           K * parentBlockSize.z / subBlocksPerParent.z);
+
+                                        maxSize = new Vector3Int(finalCumulativeSum[x, y, z], K, M);
+                                    }
                                 }
                             }
                         }
                     }
                 }
+
+                if (maxSize != Vector3Int.zero)
+                {
+                    currentSubBlocks.Add(new SubBlock()
+                    {
+                        OriginWorld = maxOriginWorld,
+                        SizeWorld = maxSizeWorld,
+                        Origin = maxOrigin,
+                        Size = maxSize,
+                        VoxelType = voxelType
+                    });
+
+                    //Remove cuboid from array
+                    for (int x = 0; x < maxSize.x; x++)
+                    {
+                        for (int y = 0; y < maxSize.y; y++)
+                        {
+                            for (int z = 0; z < maxSize.z; z++)
+                            {
+                                voxelTypes[maxOrigin.x - x, maxOrigin.y - y, maxOrigin.z - z] = -1;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    subBlockAdded = false;
+                }
             }
-
-            currentSubBlocks.Add(new SubBlock()
-            {
-                OriginWorld = maxOriginWorld,
-                SizeWorld = maxSizeWorld,
-                Origin = maxOrigin,
-                Size = maxSize,
-                VoxelType = voxelType
-            });
-
-
-            ////Remove cuboid from array
-            //for (int x = 0; x < maxSize.x; x++)
-            //{
-            //    for (int y = 0; y < maxSize.y; y++)
-            //    {
-            //        for (int z = 0; z < maxSize.z; z++)
-            //        {
-            //            voxelTypes[maxOrigin.x - x, maxOrigin.y - y, maxOrigin.z - z] = -1;
-            //        }
-            //    }
-            //}
         }
-
-
 
         calcuated = true;
 
