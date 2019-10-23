@@ -1061,9 +1061,9 @@ MonoBehaviour:
   m_HandleRect: {fileID: 426152393}
   m_Direction: 0
   m_MinValue: 0
-  m_MaxValue: 16
+  m_MaxValue: 100
   m_WholeNumbers: 1
-  m_Value: 16
+  m_Value: 100
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
@@ -1201,28 +1201,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cbbf80c918bd8b94eba4ac58fbcb9435, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  terrainWidth: 20
-  terrainHeight: 8
-  terrainDepth: 20
+  terrainWidth: 25
+  terrainHeight: 25
+  terrainDepth: 25
   numVoxelTypes: 4
-  parentBlockSize: {x: 1, y: 1, z: 1}
-  subBlocksPerParent: {x: 3, y: 3, z: 3}
+  parentBlockSize: {x: 12.5, y: 4, z: 12.5}
+  subBlocksPerParent: {x: 4, y: 4, z: 4}
   filterLayerMin: 0
-  filterLayerMax: 40
+  filterLayerMax: 100
   subBlocks: []
   mesh: {fileID: 0}
   meshRenderer: {fileID: 0}
   meshFilter: {fileID: 0}
   solidTerrainLevel: 5
   spheres:
-  - radius: 10
-    center: {x: 20, y: 4, z: 15}
-    voxelType: 1
-  - radius: 8
-    center: {x: 10, y: 5, z: 8}
-    voxelType: 2
-  - radius: 4
-    center: {x: 5, y: 2, z: 3}
+  - radius: 50
+    center: {x: 51, y: 51, z: 51}
     voxelType: 1
   debugUseFinalSum: 1
   maxSum: -1
@@ -1716,7 +1710,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1442297799}
   m_Direction: 0
   m_MinValue: 0
-  m_MaxValue: 16
+  m_MaxValue: 100
   m_WholeNumbers: 1
   m_Value: 0
   m_OnValueChanged:

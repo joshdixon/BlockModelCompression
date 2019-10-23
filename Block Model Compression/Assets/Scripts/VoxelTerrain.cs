@@ -44,6 +44,10 @@ public class VoxelTerrain : MonoBehaviour
 
         CreateBlockModel();
 
+        int voxelCount = terrainWidth * terrainHeight * terrainDepth * subBlocksPerParent.x * subBlocksPerParent.y * subBlocksPerParent.z;
+
+        Debug.Log("Number of voxels: " + voxelCount +  ", Number of blocks: " + subBlocks.Count);
+
         GenerateMesh();
     }
 
@@ -154,7 +158,7 @@ public class VoxelTerrain : MonoBehaviour
                 {
                     parentBlocks[x, y, z] = GetParentBlockType(x, y, z);
 
-                    CalculateSubBlocks(x, y, z);
+                    subBlocks.AddRange(CalculateSubBlocks(x, y, z));
                 }
             }
         }
@@ -192,51 +196,28 @@ public class VoxelTerrain : MonoBehaviour
         List<Vector2> uvs = new List<Vector2>();
         List<int> tris = new List<int>();
 
-        for (int x = 0; x < terrainWidth; x++)
+        Vector3 offset = new Vector3(
+            parentBlockSize.x / subBlocksPerParent.x,
+            parentBlockSize.y / subBlocksPerParent.y,
+            parentBlockSize.z / subBlocksPerParent.z);
+
+        offset /= 2f;
+
+        foreach (SubBlock subBlock in subBlocks)
         {
-            for (int y = 0; y < terrainHeight; y++)
-            {
-                for (int z = 0; z < terrainDepth; z++)
-                {
-                    if (y < filterLayerMin || y > filterLayerMax)
-                        continue;
+            Vector3 scale = new Vector3(subBlock.Size.x / subBlocksPerParent.x, subBlock.Size.y / subBlocksPerParent.y, subBlock.Size.z / subBlocksPerParent.z);
+            Vector3 subBlockOrigin = subBlock.OriginWorld - subBlock.SizeWorld + 2 * offset;
 
-                    int parentBlock = parentBlocks[x, y, z];
 
-                    if (parentBlock == -1)
-                        continue;
+            int minY = subBlock.Origin.y;
+            int maxY = subBlock.Origin.y + subBlock.Size.y;
 
-                    if (parentBlock != -2)
-                        BuildBlock(parentBlock, x, y, z, verts, uvs, tris, Vector3.one); //Build a parent block
-                    else
-                    {
-                        for (int i = 0; i < subBlocksPerParent.x; i++)
-                        {
-                            for (int j = 0; j < subBlocksPerParent.y; j++)
-                            {
-                                for (int k = 0; k < subBlocksPerParent.z; k++)
-                                {
-                                    int subBlockX = x * subBlocksPerParent.x + i;
-                                    int subBlockY = y * subBlocksPerParent.y + j;
-                                    int subBlockZ = z * subBlocksPerParent.z + k;
+            if (filterLayerMin > maxY || filterLayerMax < minY)
+                continue;
 
-                                    int subBlockType = GetVoxelType(subBlockX, subBlockY, subBlockZ);
-
-                                    if (subBlockType == -1)
-                                        continue;
-
-                                    Vector3 scale = new Vector3(1f / subBlocksPerParent.x, 1f / subBlocksPerParent.y, 1f / subBlocksPerParent.z);
-                                    float subBlockPositionX = x + i * scale.x;
-                                    float subBlockPositionY = y + j * scale.y;
-                                    float subBlockPositionZ = z + k * scale.z;
-                                    BuildBlock(subBlockType, subBlockPositionX, subBlockPositionY, subBlockPositionZ, verts, uvs, tris, scale);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            BuildBlock(subBlock.VoxelType, subBlockOrigin.x, subBlockOrigin.y, subBlockOrigin.z, verts, uvs, tris, subBlock.SizeWorld);
         }
+
 
         mesh.vertices = verts.ToArray();
         mesh.uv = uvs.ToArray();
@@ -250,24 +231,24 @@ public class VoxelTerrain : MonoBehaviour
     void BuildBlock(int voxelType, float x, float y, float z, List<Vector3> verts, List<Vector2> uvs, List<int> tris, Vector3 scale)
     {
         //Left side
-        if (IsFaceVisible(x - 1, y, z))
+        if (IsFaceVisible(x / parentBlockSize.x - 1, y / parentBlockSize.y, z / parentBlockSize.z))
             BuildFace(voxelType, new Vector3(x, y, z), Vector3.up, Vector3.forward, false, verts, uvs, tris, scale);
         //Right side
-        if (IsFaceVisible(x + 1, y, z))
+        if (IsFaceVisible(x / parentBlockSize.x + 1, y / parentBlockSize.y, z / parentBlockSize.z))
             BuildFace(voxelType, new Vector3(x + scale.x, y, z), Vector3.up, Vector3.forward, true, verts, uvs, tris, scale);
 
         //Bottom side
-        if (IsFaceVisible(x, y - 1, z))
+        if (IsFaceVisible(x / parentBlockSize.x, y / parentBlockSize.y - 1, z / parentBlockSize.z))
             BuildFace(voxelType, new Vector3(x, y, z), Vector3.forward, Vector3.right, false, verts, uvs, tris, scale);
         //Top side
-        if (IsFaceVisible(x, y + 1, z))
+        if (IsFaceVisible(x / parentBlockSize.x, y / parentBlockSize.y + 1, z / parentBlockSize.z))
             BuildFace(voxelType, new Vector3(x, y + scale.y, z), Vector3.forward, Vector3.right, true, verts, uvs, tris, scale);
 
         //Back side
-        if (IsFaceVisible(x, y, z - 1))
+        if (IsFaceVisible(x / parentBlockSize.x, y / parentBlockSize.y, z / parentBlockSize.z - 1))
             BuildFace(voxelType, new Vector3(x, y, z), Vector3.up, Vector3.right, true, verts, uvs, tris, scale);
         //Front side
-        if (IsFaceVisible(x, y, z + 1))
+        if (IsFaceVisible(x / parentBlockSize.x, y / parentBlockSize.y, z / parentBlockSize.z + 1))
             BuildFace(voxelType, new Vector3(x, y, z + scale.z), Vector3.up, Vector3.right, false, verts, uvs, tris, scale);
     }
 
@@ -339,7 +320,8 @@ public class VoxelTerrain : MonoBehaviour
 
     bool IsFaceVisible(float neighbourX, float neighbourY, float neighbourZ)
     {
-        if (neighbourY < filterLayerMin || neighbourY > filterLayerMax)
+
+        if (neighbourY < filterLayerMin / subBlocksPerParent.y || neighbourY >= filterLayerMax / subBlocksPerParent.y)
             return true;
 
         if ((neighbourX < 0) || (neighbourY < 0) || (neighbourZ < 0) || (neighbourX >= terrainWidth) || (neighbourY >= terrainHeight) || (neighbourZ >= terrainDepth))
@@ -387,6 +369,10 @@ public class VoxelTerrain : MonoBehaviour
     Vector3 maxOriginWorld;
     Vector3 maxSizeWorld;
 
+
+    List<Vector3> maxOriginWorldList = new List<Vector3>();
+    List<Vector3> maxSizeWorldList = new List<Vector3>();
+
     Vector3Int maxOrigin;
     Vector3Int maxSize;
 
@@ -414,9 +400,12 @@ public class VoxelTerrain : MonoBehaviour
 
                 maxSize = Vector3Int.zero;
 
-                for (int K = 1; K <= 16; K++)
+                int maxDimension = Mathf.Max(subBlocksPerParent.x, subBlocksPerParent.y);
+                maxDimension = Mathf.Max(maxDimension, subBlocksPerParent.z);
+
+                for (int K = 1; K <= maxDimension; K++)
                 {
-                    for (int M = 1; M <= 16; M++)
+                    for (int M = 1; M <= maxDimension; M++)
                     {
                         for (int x = 0; x < subBlocksPerParent.x; x++)
                         {
@@ -426,9 +415,9 @@ public class VoxelTerrain : MonoBehaviour
 
                                 for (int z = 0; z < subBlocksPerParent.z; z++)
                                 {
-                                    int voxelX = x + parentX;
-                                    int voxelY = y + parentY;
-                                    int voxelZ = z + parentZ;
+                                    int voxelX = x + parentX * subBlocksPerParent.x;
+                                    int voxelY = y + parentY * subBlocksPerParent.y;
+                                    int voxelZ = z + parentZ * subBlocksPerParent.z;
 
                                     if (voxelTypes[voxelX, voxelY, voxelZ] == voxelType)
                                         currentRSum++;
@@ -480,6 +469,10 @@ public class VoxelTerrain : MonoBehaviour
                                     else
                                         currentFinalSum = 0;
 
+                                    int voxelX = x + parentX * subBlocksPerParent.x;
+                                    int voxelY = y + parentY * subBlocksPerParent.y;
+                                    int voxelZ = z + parentZ * subBlocksPerParent.z;
+
                                     finalCumulativeSum[x, y, z] = currentFinalSum;
                                     debugValues[x, y, z] = currentFinalSum * K * M;
 
@@ -491,21 +484,20 @@ public class VoxelTerrain : MonoBehaviour
                                         bestK = K;
                                         bestM = M;
 
-                                        Debug.Log("X: " + x + ", Y: " + y + ", Z: " + z);
-
                                         maxOriginWorld = new Vector3(
-                                            x * parentBlockSize.x / subBlocksPerParent.x,
-                                            y * parentBlockSize.y / subBlocksPerParent.y,
-                                            z * parentBlockSize.z / subBlocksPerParent.z);
+                                            voxelX * parentBlockSize.x / subBlocksPerParent.x,
+                                            voxelY * parentBlockSize.y / subBlocksPerParent.y,
+                                            voxelZ * parentBlockSize.z / subBlocksPerParent.z);
 
-                                        maxOrigin = new Vector3Int(x, y, z);
+
+                                        maxOrigin = new Vector3Int(voxelX, voxelY, voxelZ);
 
                                         maxSizeWorld = new Vector3(
                                            finalCumulativeSum[x, y, z] * parentBlockSize.x / subBlocksPerParent.x,
                                            M * parentBlockSize.y / subBlocksPerParent.y,
                                            K * parentBlockSize.z / subBlocksPerParent.z);
 
-                                        maxSize = new Vector3Int(finalCumulativeSum[x, y, z], K, M);
+                                        maxSize = new Vector3Int(finalCumulativeSum[x, y, z], M, K);
                                     }
                                 }
                             }
@@ -515,6 +507,12 @@ public class VoxelTerrain : MonoBehaviour
 
                 if (maxSize != Vector3Int.zero)
                 {
+                    if (maxOriginWorldList.Count == 0)
+                    {
+                        maxOriginWorldList.Add(maxOriginWorld);
+                        maxSizeWorldList.Add(maxSizeWorld);
+                    }
+
                     currentSubBlocks.Add(new SubBlock()
                     {
                         OriginWorld = maxOriginWorld,
@@ -560,14 +558,21 @@ public class VoxelTerrain : MonoBehaviour
 
         offset /= 2f;
 
-        Handles.color = Color.yellow;
-        Handles.DrawWireCube((maxOriginWorld + 2 * offset + maxOriginWorld - maxSizeWorld + 2 * offset) / 2f, maxSizeWorld);
+        for (int i = 0; i < maxOriginWorldList.Count; i++)
+        {
+            maxOriginWorld = maxOriginWorldList[i];
+            maxSizeWorld = maxSizeWorldList[i];
 
-        Handles.DrawSphere(0, maxOriginWorld + 2*offset, Quaternion.identity, 0.025f);
 
-        Handles.color = Color.green;
-        Handles.DrawSphere(0, maxOriginWorld - maxSizeWorld + 2*offset, Quaternion.identity, 0.025f);
-        Handles.color = Color.white;
+            Handles.color = Color.yellow;
+            Handles.DrawWireCube((maxOriginWorld + 2 * offset + maxOriginWorld - maxSizeWorld + 2 * offset) / 2f, maxSizeWorld);
+
+            Handles.DrawSphere(0, maxOriginWorld + 2 * offset, Quaternion.identity, 0.025f);
+
+            Handles.color = Color.green;
+            Handles.DrawSphere(0, maxOriginWorld - maxSizeWorld + 2 * offset, Quaternion.identity, 0.025f);
+            Handles.color = Color.white;
+        }
 
         for (int x = 0; x < subBlocksPerParent.x; x++)
         {
