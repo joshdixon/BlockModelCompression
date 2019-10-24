@@ -31,6 +31,9 @@ public class VoxelTerrain : MonoBehaviour
     public int solidTerrainLevel;
     public VoxelSphere[] spheres;
 
+    private List<GameObject> meshObjects = new List<GameObject>();
+    public Material defaultMat;
+
     void Start()
     {
         meshRenderer = GetComponent<MeshRenderer>();
@@ -190,6 +193,11 @@ public class VoxelTerrain : MonoBehaviour
 
     public void GenerateMesh()
     {
+        foreach(GameObject mo in meshObjects)
+            Destroy(mo);
+
+        meshObjects.Clear();
+
         mesh = new Mesh();
 
         List<Vector3> verts = new List<Vector3>();
@@ -202,6 +210,11 @@ public class VoxelTerrain : MonoBehaviour
             parentBlockSize.z / subBlocksPerParent.z);
 
         offset /= 2f;
+
+        GameObject meshObject = new GameObject("Mesh");
+        meshObject.transform.SetParent(transform);
+        meshObject.AddComponent<MeshRenderer>().material = defaultMat;
+        MeshFilter meshObjectFilter = meshObject.AddComponent<MeshFilter>();
 
         foreach (SubBlock subBlock in subBlocks)
         {
@@ -216,16 +229,43 @@ public class VoxelTerrain : MonoBehaviour
                 continue;
 
             BuildBlock(subBlock.VoxelType, subBlockOrigin.x, subBlockOrigin.y, subBlockOrigin.z, verts, uvs, tris, subBlock.SizeWorld);
+
+            if (verts.Count > 60000)
+            {
+                mesh = new Mesh();
+                mesh.vertices = verts.ToArray();
+                mesh.uv = uvs.ToArray();
+                mesh.triangles = tris.ToArray();
+                mesh.RecalculateBounds();
+                mesh.RecalculateNormals();
+
+                meshObjectFilter.mesh = mesh;
+
+                meshObjects.Add(meshObject);
+
+                verts.Clear();
+                uvs.Clear();
+                tris.Clear();
+
+                meshObject = new GameObject("Mesh");
+                meshObject.transform.SetParent(transform);
+                meshObject.AddComponent<MeshRenderer>().material = defaultMat;
+                meshObjectFilter = meshObject.AddComponent<MeshFilter>();
+
+                
+            }
         }
 
-
+        mesh = new Mesh();
         mesh.vertices = verts.ToArray();
         mesh.uv = uvs.ToArray();
         mesh.triangles = tris.ToArray();
         mesh.RecalculateBounds();
         mesh.RecalculateNormals();
 
-        meshFilter.mesh = mesh;
+        meshObjectFilter.mesh = mesh;
+
+        meshObjects.Add(meshObject);
     }
 
     void BuildBlock(int voxelType, float x, float y, float z, List<Vector3> verts, List<Vector2> uvs, List<int> tris, Vector3 scale)
