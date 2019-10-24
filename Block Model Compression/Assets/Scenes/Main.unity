@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
+  m_IndirectSpecularColor: {r: 0.44657844, g: 0.49641222, b: 0.57481694, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1061,9 +1061,9 @@ MonoBehaviour:
   m_HandleRect: {fileID: 426152393}
   m_Direction: 0
   m_MinValue: 0
-  m_MaxValue: 16
+  m_MaxValue: 32
   m_WholeNumbers: 1
-  m_Value: 16
+  m_Value: 32
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
@@ -1204,26 +1204,30 @@ MonoBehaviour:
   terrainWidth: 20
   terrainHeight: 8
   terrainDepth: 20
-  numVoxelTypes: 4
+  numVoxelTypes: 3
   parentBlockSize: {x: 1, y: 1, z: 1}
-  subBlocksPerParent: {x: 3, y: 3, z: 3}
+  subBlocksPerParent: {x: 4, y: 4, z: 4}
   filterLayerMin: 0
   filterLayerMax: 40
   subBlocks: []
   mesh: {fileID: 0}
   meshRenderer: {fileID: 0}
   meshFilter: {fileID: 0}
-  solidTerrainLevel: 5
+  solidTerrainLevel: 4
   spheres:
-  - radius: 10
-    center: {x: 20, y: 4, z: 15}
+  - radius: 13
+    center: {x: 20, y: 8, z: 15}
     voxelType: 1
-  - radius: 8
+  - radius: 10
     center: {x: 10, y: 5, z: 8}
     voxelType: 2
-  - radius: 4
+  - radius: 19
+    center: {x: 30, y: 8, z: 30}
+    voxelType: 2
+  - radius: 5
     center: {x: 5, y: 2, z: 3}
     voxelType: 1
+  defaultMat: {fileID: 2100000, guid: d1c330d8ed15cb44585958e86fa2e826, type: 2}
   debugUseFinalSum: 1
   maxSum: -1
   bestK: 0
@@ -1716,7 +1720,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1442297799}
   m_Direction: 0
   m_MinValue: 0
-  m_MaxValue: 16
+  m_MaxValue: 32
   m_WholeNumbers: 1
   m_Value: 0
   m_OnValueChanged:
